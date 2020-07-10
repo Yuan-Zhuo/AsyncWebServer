@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <title>Ranking</title>
+</head>
+
+<body>
+  <!-- Get User Info -->
+  <div>
+    <h2>Get User Info:</h2>
+    <div>
+      <form style="display: inline;">
+        User Id: <input type="text" id="inputInfo" />
+      </form>
+      <input style="display: inline;" type="submit" value="get" id="btnInfo" />
+    </div>
+    <br />
+    <div>
+      <em style="display: inline;">Result:</em>
+      <p id="displayInfo" style="display: inline;"></p>
+    </div>
+  </div>
+
+  <!-- Put User -->
+  <div>
+    <h2>Put User:</h2>
+    <div>
+      <form style="display: inline;">
+        User Id: <input type="text" id="inputPutUid" /> Name:
+        <input type="text" id="inputPutName" /> Exp_pers:
+        <input type="text" id="inputPutExp_pers" /> active:
+        <input type="text" id="inputPutActive" /> Exp_gang:
+        <input type="text" id="inputPutExp_gang" />
+      </form>
+      <input style="display: inline;" type="submit" value="put" id="btnPut" />
+    </div>
+    <br />
+    <div>
+      <em style="display: inline;">Result:</em>
+      <p id="displayPut" style="display: inline;"></p>
+    </div>
+  </div>
+
+  <!-- Get Exp_pers -->
+  <div>
+    <h2>Get Exp_pers Rank:</h2>
+    <div>
+      <form style="display: inline;">
+        User Id: <input type="text" id="inputGetExp_pers" />
+      </form>
+      <input style="display: inline;" type="submit" value="get" id="btnGetExp_pers" />
+    </div>
+    <br />
+    <div>
+      <em style="display: inline;">Result:</em>
+      <p id="displayGetExp_pers" style="display: inline;"></p>
+    </div>
+  </div>
+
+  <!-- Get Active -->
+  <div>
+    <h2>Get Active Rank:</h2>
+    <div>
+      <form style="display: inline;">
+        User Id: <input type="text" id="inputGetActive" />
+      </form>
+      <input style="display: inline;" type="submit" value="get" id="btnGetActive" />
+    </div>
+    <br />
+    <div>
+      <em style="display: inline;">Result:</em>
+      <p id="displayGetActive" style="display: inline;"></p>
+    </div>
+  </div>
+
+  <!-- Get Exp_gang -->
+  <div>
+    <h2>Get Exp_gang Rank:</h2>
+    <div>
+      <form style="display: inline;">
+        User Id: <input type="text" id="inputGetExp_gang" />
+      </form>
+      <input style="display: inline;" type="submit" value="get" id="btnGetExp_gang" />
+    </div>
+    <br />
+    <div>
+      <em style="display: inline;">Result:</em>
+      <p id="displayGetExp_gang" style="display: inline;"></p>
+    </div>
+  </div>
+
+  <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js" type="text/javascript"></script>
+  <script type="text/javascript">
+    // devcloud
+    var baseUrl = 'http://9.134.234.94:10000'
+    // Get User Info
+    $('#btnInfo').click(function () {
+      $.ajax({
+        url: baseUrl + '/info?uid=' + $('#inputInfo').val(),
+        type: 'GET',
+        crossDomain: true,
+        dataType: 'text',
+        success: function (msg) {
+          console.log('get info')
+          $('#displayInfo').html(msg)
+        },
+      })
+    })
+    // Put User
+    $('#btnPut').click(function () {
+      var User = {
+        uid: $('#inputPutUid').val(),
+        name: $('#inputPutName').val(),
+        exp_pers: $('#inputPutExp_pers').val(),
+        active: $('#inputPutActive').val(),
+        exp_gang: $('#inputPutExp_gang').val(),
+      }
+
+      console.log(User)
+
+      $.ajax({
+        url: baseUrl + '/put',
+        type: 'POST',
+        crossDomain: true,
+        data: JSON.stringify(User),
+        contentType: 'application/json; charset=utf-8',
+        dataType: 'text',
+        success: function (msg) {
+          console.log('put user')
+          $('#displayPut').html(msg)
+        },
+      })
+    })
+
+    // Get Exp_pers
+    $('#btnGetExp_pers').click(function () {
+      $.ajax({
+        url: baseUrl + '/get_exp_pers?uid=' + $('#inputGetExp_pers').val(),
+        type: 'GET',
+        crossDomain: true,
+        dataType: 'text',
+        success: function (msg) {
+          console.log('get exp_pers')
+          $('#displayGetExp_pers').html(msg)
+        },
+      })
+    })
+
+    // Get Active
+    $('#btnGetActive').click(function () {
+      $.ajax({
+        url: baseUrl + '/get_active?uid=' + $('#inputGetActive').val(),
+        type: 'GET',
+        crossDomain: true,
+        dataType: 'text',
+        success: function (msg) {
+          console.log('get active')
+          $('#displayGetActive').html(msg)
+        },
+      })
+    })
+
+    // Get Exp_gang
+    $('#btnGetExp_gang').click(function () {
+      $.ajax({
+        url: baseUrl + '/get_exp_gang?uid=' + $('#inputGetExp_gang').val(),
+        type: 'GET',
+        crossDomain: true,
+        dataType: 'text',
+        success: function (msg) {
+          console.log('get exp_gang')
+          $('#displayGetExp_gang').html(msg)
+        },
+      })
+    })
+  </script>
+</body>
+
+</html>
