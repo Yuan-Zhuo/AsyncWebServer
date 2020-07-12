@@ -1,3 +1,6 @@
+#ifndef _SERVER_HPP_
+#define _SERVER_HPP_
+
 #define BOOST_BIND_GLOBAL_PLACEHOLDERS
 
 #include <boost/asio.hpp>
@@ -5,10 +8,13 @@
 #include <boost/property_tree/ptree.hpp>
 #include <cassert>
 #include <iostream>
+#include <list>
 #include <regex>
 #include <sstream>
 #include <unordered_map>
+#include <vector>
 
+#include "exception.hpp"
 #include "ranking.hpp"
 
 struct Request {
@@ -32,8 +38,14 @@ class Server {
   rc_t rc;
   rc_t exception_rc;
   std::vector<rc_t::iterator> rc_vec;
+  std::list<std::string> json_fields;
 
   Ranking rank;
+
+  void config_json() {
+    const char* cstrs[] = {"uid", "name", "exp_pers", "active", "exp_gang"};
+    json_fields.assign(cstrs, std::end(cstrs));
+  }
 
   void write_response(std::ostream& response,
                       std::stringstream& content_stream) {
@@ -53,7 +65,7 @@ class Server {
              << content_stream.rdbuf();
   }
 
-  void set_rc() {
+  void config_rc() {
     // rc
     // get info by uid
     rc["(/info\\\?uid=)(\\d+)$"]["GET"] = [this](std::ostream& response,
@@ -62,14 +74,15 @@ class Server {
 
       try {
         uint32_t uid = std::stoul(request.path_match[2], 0, 10);
-        User* user_ptr = rank.get_user(uid);
-        content_stream << "User: " << uid << "\tname: " << user_ptr->name
-                       << "\texp_pers: " << user_ptr->exp_pers
-                       << "\tactive: " << user_ptr->active
-                       << "\texp_gang: " << user_ptr->exp_gang;
-      } catch (...) {
-        content_stream << "User doesn't exist.";
+        auto iter = rank.get_user(uid);
+        content_stream << (*iter);
+      } catch (const NoneOfUidException& e) {
+        content_stream << "User " << e.what() << " doesn't exist.";
       }
+      // will not caused by stoul bacause of regex match
+      // catch (std::invalid_argument& e) {
+      //   content_stream << "Bad Param";
+      // }
 
       write_response(response, content_stream);
     };
@@ -81,31 +94,25 @@ class Server {
       boost::property_tree::ptree pt;
 
       try {
-        User user;
         boost::property_tree::read_json(post_stream, pt);
         auto iter = pt.begin();
 
-        assert(!(iter->first).compare("uid"));
-        user.uid = iter->second.get_value<uint32_t>();
-        iter++;
-        assert(!(iter->first).compare("name"));
-        user.name = iter->second.get_value<std::string>();
-        iter++;
-        assert(!(iter->first).compare("exp_pers"));
-        user.exp_pers = iter->second.get_value<uint32_t>();
-        iter++;
-        assert(!(iter->first).compare("active"));
-        user.active = iter->second.get_value<uint32_t>();
-        iter++;
-        assert(!(iter->first).compare("exp_gang"));
-        user.exp_gang = iter->second.get_value<uint32_t>();
-        iter++;
-        assert(iter == pt.end());
+        // parse
+        for (auto field : json_fields)
+          if (((iter++)->first).compare(field))
+            throw IncorrectHttpRequestException(field);
 
+        User user;
+        user.assign(pt.begin());
         rank.put_user(user);
+        std::cout << user;
         content_stream << "Put Successfully";
-      } catch (...) {
+      } catch (const IncorrectHttpRequestException& e) {
+        std::cout << "HttpRequest Incorrect: " << e.what() << std::endl;
         content_stream << "Bad Put";
+      } catch (boost::property_tree::ptree_error& e) {
+        std::cout << e.what() << std::endl;
+        content_stream << "Bad Param";
       }
 
       write_response(response, content_stream);
@@ -120,8 +127,8 @@ class Server {
         uint32_t uid = std::stoul(request.path_match[2], 0, 10);
         rank.remove_user(uid);
         content_stream << "Remove Successfully";
-      } catch (...) {
-        content_stream << "User doesn't exist.";
+      } catch (const NoneOfUidException& e) {
+        content_stream << "User " << e.what() << " doesn't exist.";
       }
 
       write_response(response, content_stream);
@@ -135,8 +142,8 @@ class Server {
       try {
         uint32_t uid = std::stoul(request.path_match[2], 0, 10);
         content_stream << "Exp_Pers Rank: " << rank.get_exp_pers_rank(uid);
-      } catch (...) {
-        content_stream << "User doesn't exist.";
+      } catch (const NoneOfUidException& e) {
+        content_stream << "User " << e.what() << " doesn't exist.";
       }
 
       write_response(response, content_stream);
@@ -150,8 +157,8 @@ class Server {
       try {
         uint32_t uid = std::stoul(request.path_match[2], 0, 10);
         content_stream << "Active Rank: " << rank.get_active_rank(uid);
-      } catch (...) {
-        content_stream << "User doesn't exist.";
+      } catch (const NoneOfUidException& e) {
+        content_stream << "User " << e.what() << " doesn't exist.";
       }
 
       write_response(response, content_stream);
@@ -165,8 +172,8 @@ class Server {
       try {
         uint32_t uid = std::stoul(request.path_match[2], 0, 10);
         content_stream << "Exp_Gang Rank: " << rank.get_exp_gang_rank(uid);
-      } catch (...) {
-        content_stream << "User doesn't exist.";
+      } catch (const NoneOfUidException& e) {
+        content_stream << "User " << e.what() << " doesn't exist.";
       }
 
       write_response(response, content_stream);
@@ -300,9 +307,15 @@ class Server {
         }
       } while (matched == true);
     }
-    getline(stream, request.content);
+    // body
+    if (!stream.eof()) getline(stream, request.content);
 
     return request;
+  }
+
+  void config() {
+    config_json();
+    config_rc();
   }
 
  public:
@@ -311,10 +324,12 @@ class Server {
         acceptor(io_service, endpoint) {}
 
   void start() {
-    set_rc();
+    config();
 
     accept();
 
     io_service.run();
   }
 };
+
+#endif  // !_SERVER_HPP_

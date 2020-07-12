@@ -2,7 +2,7 @@
 CC =	/opt/rh/devtoolset-8/root/usr/bin/g++
 
 # compiler flags:
-CFLAGS  = -std=c++11 -pthread -g -Wall 
+CFLAGS  = -std=c++14 -pthread -g -Wall 
 
 #Linking Flag
 LFLAGS =	-Wall
@@ -18,7 +18,7 @@ TARGET = webserver
 $(TARGET):	main.o
 	$(CC) $(CFLAGS) -o $(TARGET) main.o
 
-main.o:	main.cpp ranking.hpp server.hpp
+main.o:	main.cpp ranking.hpp server.hpp exception.hpp
 	$(CC) $(INCLUDES) $(CFLAGS) -o main.o -c main.cpp
 
 clean:	

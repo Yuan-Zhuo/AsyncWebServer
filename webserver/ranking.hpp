@@ -1,3 +1,6 @@
+#ifndef _RANKING_HPP_
+#define _RANKING_HPP_
+
 #include <stdint.h>
 
 #include <boost/multi_index/indexed_by.hpp>
@@ -7,8 +10,11 @@
 #include <boost/multi_index/random_access_index.hpp>
 #include <boost/multi_index/ranked_index.hpp>
 #include <boost/multi_index_container.hpp>
+#include <cassert>
 #include <iostream>
 #include <string>
+
+#include "exception.hpp"
 
 struct User {
   User() {}
@@ -29,9 +35,18 @@ struct User {
   uint32_t by_exp_pers() const { return exp_pers; }
   uint32_t by_exp_gang() const { return exp_gang; }
 
+  void assign(boost::property_tree::ptree::iterator iter) {
+    uid = (iter++)->second.get_value<uint32_t>();
+    name = (iter++)->second.get_value<std::string>();
+    exp_pers = (iter++)->second.get_value<uint32_t>();
+    active = (iter++)->second.get_value<uint32_t>();
+    exp_gang = (iter++)->second.get_value<uint32_t>();
+  }
+
   friend std::ostream &operator<<(std::ostream &out, const User &user) {
-    out << user.uid << "\t" << user.name << '\t' << user.exp_pers << '\t'
-        << user.active << '\t' << user.exp_gang << std::endl;
+    out << "User: " << user.uid << "\tname: " << user.name
+        << "\texp_pers: " << user.exp_pers << "\tactive: " << user.active
+        << "\texp_gang: " << user.exp_gang << std::endl;
     return out;
   }
 };
@@ -93,40 +108,37 @@ class Ranking {
  public:
   Ranking() {}
 
+  inline auto get_user(uint32_t uid) {
+    auto iter = uid_index.find(uid);
+    if (iter == uid_index.end()) throw NoneOfUidException(uid);
+    return iter;
+  }
+
   void put_user(User const &user) { users.insert(user); }
 
   void modify_user(User const &user) {
-    auto iter = uid_index.find(user.uid);
-    if (iter != uid_index.end()) {
-      uid_index.modify(iter, [&user](User &user_) { user_ = user; });
-    }
+    auto iter = get_user(user.uid);
+    uid_index.modify(iter, [&user](User &user_) { user_ = user; });
   }
 
   void remove_user(uint32_t uid) {
-    auto iter = uid_index.find(uid);
-    if (iter != uid_index.end()) uid_index.erase(iter);
+    auto iter = get_user(uid);
+    uid_index.erase(iter);
   }
 
-  User *get_user(uint32_t uid) {
-    auto iter = uid_index.find(uid);
-    if (iter != uid_index.end())
-      return (User *)&(*iter);
-    else
-      return nullptr;
-  }
+  uint32_t get_size() { return users.size(); }
 
   uint32_t get_exp_pers_rank(uint32_t uid) {
-    auto iter = uid_index.find(uid);
-    return exp_pers_index.find_rank(iter->exp_pers);
+    return exp_pers_index.find_rank(get_user(uid)->exp_pers);
   }
 
   uint32_t get_exp_gang_rank(uint32_t uid) {
-    auto iter = uid_index.find(uid);
-    return exp_gang_index.find_rank(iter->exp_gang);
+    return exp_pers_index.find_rank(get_user(uid)->exp_gang);
   }
 
   uint32_t get_active_rank(uint32_t uid) {
-    auto iter = uid_index.find(uid);
-    return active_index.find_rank(iter->active);
+    return exp_pers_index.find_rank(get_user(uid)->active);
   }
 };
+
+#endif  // !_RANKING_HPP_
