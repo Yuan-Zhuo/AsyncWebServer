@@ -4,6 +4,7 @@
 #define BOOST_BIND_GLOBAL_PLACEHOLDERS
 
 #include <boost/asio.hpp>
+#include <boost/asio/signal_set.hpp>
 #include <boost/property_tree/json_parser.hpp>
 #include <boost/property_tree/ptree.hpp>
 #include <cassert>
@@ -35,12 +36,29 @@ class Server {
   boost::asio::io_service io_service;
   boost::asio::ip::tcp::endpoint endpoint;
   boost::asio::ip::tcp::acceptor acceptor;
+  boost::asio::signal_set signals;
+  boost::asio::io_service::work work;
   rc_t rc;
   rc_t exception_rc;
   std::vector<rc_t::iterator> rc_vec;
   std::list<std::string> json_fields;
+  uint32_t service_cnt;
+  std::vector<std::thread> threads;
+  const std::thread::id main_thread_id;
 
   Ranking rank;
+
+  void handler(const boost::system::error_code& error, int signal_number) {
+    if (!error) {
+      std::cout << "Bye!" << std::endl;
+      exit(1);
+    }
+  }
+
+  void config_signal() {
+    signals.add(SIGINT);
+    signals.async_wait(boost::bind(&Server::handler, this, _1, _2));
+  }
 
   void config_json() {
     const char* cstrs[] = {"uid", "name", "exp_pers", "active", "exp_gang"};
@@ -313,22 +331,38 @@ class Server {
     return request;
   }
 
+  inline void join_all_thread() {
+    for (auto& t : threads) t.join();
+    std::cout << "Bye!" << std::endl;
+  }
+
   void config() {
     config_json();
     config_rc();
+    config_signal();
   }
 
  public:
-  Server(unsigned port)
+  Server(uint32_t port, u_int32_t service_cnt_ = 1)
       : endpoint(boost::asio::ip::tcp::v4(), port),
-        acceptor(io_service, endpoint) {}
+        acceptor(io_service, endpoint),
+        signals(io_service),
+        work(io_service),
+        service_cnt(service_cnt_),
+        main_thread_id(std::this_thread::get_id()) {}
 
   void start() {
     config();
 
     accept();
 
-    io_service.run();
+    for (uint32_t i = 0; i < service_cnt; i++) {
+      threads.emplace_back([this]() { io_service.run(); });
+    }
+
+    // io_service.run();
+
+    join_all_thread();
   }
 };
 
