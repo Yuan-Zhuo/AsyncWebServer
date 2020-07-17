@@ -386,7 +386,7 @@ BENCHMARK(BM_get_exp_pers_rank)->Apply(Args_basic);
 
 - 增删改查用户数据
 
-  1. 从图表可以看出，put、modify、get 三个操作呈现良好的直线，由于是对数坐标，说明他们的时间复杂度是 O(n)
+  1. 从图表可以看出，put、modify、get 三个操作呈现良好的直线，由于是对数坐标，说明他们的时间复杂度是 O(log(n))
   2. 另外从综合图上可以看到，耗时上排序为 get < modify < put < remove，这也容易理解，因为 modify 如果修改前后位置不变，则只需要 O(1)的时间更新一下，如果修改后位置改变，则需要调整树的结构
   3. 发现 remove 操作有在 16384 前后有明显变化，因此用 perf 查看 cache 情况
 
@@ -780,15 +780,5 @@ users = segment->construct<container_t>("Ranking Container")(
 - 问题：Thrashing Problem，千万级数量级下，cache/memory 总需求过大，工作集超过 cache/memory，过于频繁的 cache 替换/缺页异常；
 
 - 本质：而这种频繁的请求是由于：替换时错误的把关键数据结构 evict，而把只读一次的数据存放在 cache/memory 中
-
-<center>
-    <div style="display:inline">
-        <img src="img/PCID.png" height="200">
-    </div>
-    <br>
-    <div style="color:orange; border-bottom: 1px solid #d9d9d9; display: inline-block; color: #999; padding: 2px;">
-        example: PCID for TLB in x86
-    </div>
-</center>
 
 - 解决：对 multi_index 的 node 结构打标签，value 不打，在 cache/memory 替换时，打标签的数据不会被 evict，这样 multi_index 的核心数据结构永远在 cache/memory 中，即使数量级进一步，影响的只是读取数据的操作，而遍历树的过程不受到影响
