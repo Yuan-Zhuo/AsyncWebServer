@@ -61,7 +61,7 @@ class Server {
   }
 
   void config_json() {
-    const char* cstrs[] = {"uid", "name", "exp_pers", "active", "exp_gang"};
+    const char* cstrs[] = {"uid", "name", "exp_pers", "activity"};
     json_fields.assign(cstrs, std::end(cstrs));
   }
 
@@ -120,8 +120,8 @@ class Server {
           if (((iter++)->first).compare(field))
             throw IncorrectHttpRequestException(field);
 
-        User user;
-        user.assign(pt.begin());
+        User user(rank.get_ca());
+        user.assign(pt.begin(), rank.get_ca());
         rank.put_user(user);
         std::cout << user;
         content_stream << "Put Successfully";
@@ -167,29 +167,14 @@ class Server {
       write_response(response, content_stream);
     };
 
-    // get active rank
-    rc["(/get_active\\\?uid=)(\\d+)$"]["GET"] = [this](std::ostream& response,
-                                                       Request& request) {
-      std::stringstream content_stream;
-
-      try {
-        uint32_t uid = std::stoul(request.path_match[2], 0, 10);
-        content_stream << "Active Rank: " << rank.get_active_rank(uid);
-      } catch (const NoneOfUidException& e) {
-        content_stream << "User " << e.what() << " doesn't exist.";
-      }
-
-      write_response(response, content_stream);
-    };
-
-    // get exp_gang rank
-    rc["(/get_exp_gang\\\?uid=)(\\d+)$"]["GET"] = [this](std::ostream& response,
+    // get activity rank
+    rc["(/get_activity\\\?uid=)(\\d+)$"]["GET"] = [this](std::ostream& response,
                                                          Request& request) {
       std::stringstream content_stream;
 
       try {
         uint32_t uid = std::stoul(request.path_match[2], 0, 10);
-        content_stream << "Exp_Gang Rank: " << rank.get_exp_gang_rank(uid);
+        content_stream << "activity Rank: " << rank.get_activity_rank(uid);
       } catch (const NoneOfUidException& e) {
         content_stream << "User " << e.what() << " doesn't exist.";
       }

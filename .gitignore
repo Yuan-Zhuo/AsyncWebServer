@@ -1,5 +1,17 @@
+!/**/
+!*.*
+
 # Prerequisites
 *.d
+
+*.txt
+*.info
+test.cpp
+
+test_basic
+test_limit
+test_comp
+
 
 # Compiled Object files
 *.slo
